@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="fil">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#14532d">
+<title>Barangay Dog Registration</title>
+<style>
+:root{--green:#14532d;--green2:#166534;--bg:#f3f6f4;--card:#fff;--ink:#17221b;--muted:#65736a;--line:#dce5de;--red:#b42318;--gold:#a16207}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--ink)}
+header{background:var(--green);color:white;padding:18px 16px}
+.head{max-width:1100px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{font-size:21px;margin:0 0 5px}header p{margin:0;font-size:13px;opacity:.9}
+main{max-width:1100px;margin:18px auto;padding:0 14px 30px}
+.notice{background:#fff8e6;border:1px solid #f1d28a;padding:12px 14px;border-radius:10px;font-size:13px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px #163b2110}
+h2{font-size:17px;margin:0 0 13px}.muted{color:var(--muted);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.stat{background:#fff;border:1px solid var(--line);padding:13px;border-radius:10px}.stat strong{display:block;font-size:25px;color:var(--green);margin-top:5px}
+label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}
+input,select,textarea{width:100%;padding:11px 10px;border:1px solid #cbd7ce;border-radius:8px;font-size:15px;background:white;color:var(--ink)}
+textarea{min-height:70px;resize:vertical}
+.field{min-width:0}.full{grid-column:1/-1}
+button{border:0;border-radius:8px;padding:11px 14px;font-size:14px;font-weight:700;cursor:pointer;background:var(--green2);color:white}
+button.secondary{background:#e7eee9;color:var(--green)}button.danger{background:#fff0ee;color:var(--red)}button:disabled{opacity:.5;cursor:not-allowed}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.hidden{display:none!important}
+.tabs{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px}.tabs button{white-space:nowrap}
+.tabs button.active{background:#0b3d21}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;border-bottom:1px solid var(--line);padding:10px 8px;vertical-align:top}th{background:#f7faf8}
+.tablewrap{overflow-x:auto}
+.badge{display:inline-block;border-radius:99px;padding:4px 8px;font-size:11px;font-weight:bold;background:#e7eee9;color:var(--green)}
+.badge.warn{background:#fff3d6;color:var(--gold)}.badge.red{background:#feeceb;color:var(--red)}
+#message{position:sticky;top:0;z-index:5;padding:10px 14px;font-size:13px;display:none}
+#message.ok{display:block;background:#e3f7e9;color:#14532d}#message.err{display:block;background:#feeceb;color:#8c1d18}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
+@media(max-width:650px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.stats .stat:last-child{grid-column:1/-1}h1{font-size:18px}.card{padding:13px}header{padding:15px 12px}}
+</style>
+</head>
+<body>
+<header><div class="head"><div><h1>🐕 Barangay Dog Registration</h1><p>Dog & Owner Registry • Prototype</p></div><button id="logoutBtn" class="secondary hidden">Log out</button></div></header>
+<div id="message"></div>
+<main>
+  <section id="setupNotice" class="notice hidden"><strong>Setup required:</strong> Ilagay muna ang Supabase Project URL at anon key sa file na <code>app-config.js</code>. Sundin ang README sa package.</section>
+  <section id="loginCard" class="card">
+    <h2>Staff Login</h2>
+    <p class="muted">Gamitin ang shared account na ginawa sa Supabase Auth. Huwag ilagay ang password sa source code.</p>
+    <form id="loginForm" class="grid">
+      <div class="field full"><label for="email">Email</label><input id="email" type="email" autocomplete="username" required placeholder="barangay email"></div>
+      <div class="field full"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required></div>
+      <div class="full"><button type="submit">Log in</button></div>
+    </form>
+  </section>
+  <section id="appArea" class="hidden">
+    <div class="stats">
+      <div class="stat"><span class="muted">Registered owners</span><strong id="ownerCount">—</strong></div>
+      <div class="stat"><span class="muted">Registered dogs</span><strong id="dogCount">—</strong></div>
+      <div class="stat"><span class="muted">Marked vaccinated</span><strong id="vaccinatedCount">—</strong></div>
+    </div>
+    <div class="tabs">
+      <button class="active" data-tab="register">Register</button>
+      <button data-tab="records">Search records</button>
+      <button data-tab="vaccination">Vaccination</button>
+    </div>
+    <section id="tab-register" class="card">
+      <h2>Register owner and dog</h2>
+      <p class="muted">Puwedeng magdagdag ng maraming aso sa iisang amo. Piliin ang existing owner kung nakarehistro na.</p>
+      <form id="registrationForm">
+        <h3>Impormasyon ng amo</h3>
+        <div class="grid">
+          <div class="field"><label>Buong pangalan *</label><input name="owner_name" required maxlength="150"></div>
+          <div class="field"><label>Contact number</label><input name="phone" inputmode="tel" maxlength="40"></div>
+          <div class="field"><label>Purok / Sitio *</label><input name="purok" required maxlength="100"></div>
+          <div class="field"><label>Address</label><input name="address" maxlength="250"></div>
+        </div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+        <h3>Impormasyon ng aso</h3>
+        <div class="grid">
+          <div class="field"><label>Pangalan ng aso *</label><input name="dog_name" required maxlength="100"></div>
+          <div class="field"><label>Breed / Lahi</label><input name="breed" placeholder="Hal. Aspin" maxlength="100"></div>
+          <div class="field"><label>Kasarian</label><select name="sex"><option value="">Pumili</option><option>Male</option><option>Female</option><option>Unknown</option></select></div>
+          <div class="field"><label>Kulay / Marka</label><input name="color" maxlength="100"></div>
+          <div class="field"><label>Petsa ng kapanganakan (kung alam)</label><input name="birth_date" type="date"></div>
+          <div class="field"><label>Vaccination status</label><select name="vaccination_status"><option value="Unknown">Hindi pa naitala</option><option value="Vaccinated">Vaccinated</option><option value="Unvaccinated">Unvaccinated</option></select></div>
+          <div class="field"><label>Petsa ng bakuna (kung vaccinated)</label><input name="vaccination_date" type="date"></div>
+          <div class="field"><label>Susunod na bakuna</label><input name="next_vaccination_date" type="date"></div>
+          <div class="field full"><label>Notes</label><textarea name="notes" placeholder="Karagdagang impormasyon (optional)"></textarea></div>
+        </div>
+        <div class="actions"><button type="submit">Save registration</button><button type="reset" class="secondary">Clear form</button></div>
+      </form>
+    </section>
+    <section id="tab-records" class="card hidden">
+      <div class="row"><h2>Registered dogs</h2><button id="exportBtn" class="secondary">Export CSV</button></div>
+      <div class="grid" style="margin-bottom:12px">
+        <div class="field full"><label>Search by dog, owner, registration no. or purok</label><input id="searchInput" placeholder="Mag-type para maghanap..."></div>
+      </div>
+      <div class="tablewrap"><table><thead><tr><th>Dog Reg. No.</th><th>Aso</th><th>Amo / Purok</th><th>Vaccination</th><th>Registered</th></tr></thead><tbody id="recordsBody"><tr><td colspan="5">Mag-login para makita ang records.</td></tr></tbody></table></div>
+    </section>
+    <section id="tab-vaccination" class="card hidden">
+      <h2>Update vaccination status</h2>
+      <p class="muted">Piliin ang aso ayon sa registration number. Itatala nito ang pinakahuling vaccination details; sa susunod na bersiyon puwedeng magkaroon ng kumpletong history.</p>
+      <form id="vaccinationForm" class="grid">
+        <div class="field full"><label>Dog registration number *</label><input name="registration_no" required placeholder="DOG-2026-0001"></div>
+        <div class="field"><label>Status *</label><select name="vaccination_status" required><option>Vaccinated</option><option>Unvaccinated</option><option>Unknown</option></select></div>
+        <div class="field"><label>Petsa ng bakuna</label><input name="vaccination_date" type="date"></div>
+        <div class="field"><label>Susunod na bakuna</label><input name="next_vaccination_date" type="date"></div>
+        <div class="field"><label>Uri ng bakuna</label><input name="vaccine_type" placeholder="Hal. Anti-rabies"></div>
+        <div class="field"><label>Vaccinator</label><input name="vaccinator"></div>
+        <div class="field full"><label>Notes</label><textarea name="notes"></textarea></div>
+        <div class="full"><button type="submit">Update vaccination</button></div>
+      </form>
+    </section>
+  </section>
+  <footer>Prototype v0.1 • Para sa pilot testing lamang. Gumamit ng dummy data habang hindi pa naaprubahan ang security at privacy setup.</footer>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./app-config.js"></script>
+<script>
+(() => {
+  const config = window.APP_CONFIG || {};
+  const configured = config.SUPABASE_URL && config.SUPABASE_ANON_KEY &&
+    !config.SUPABASE_URL.includes("YOUR_PROJECT") && !config.SUPABASE_ANON_KEY.includes("YOUR_ANON");
+  const $ = id => document.getElementById(id);
+  let db = null, dogs = [], owners = [];
+  const showMessage = (text, type="ok") => {
+    const el=$("message"); el.textContent=text; el.className=type; el.style.display="block";
+    window.scrollTo({top:0,behavior:"smooth"}); setTimeout(()=>{el.style.display="none";},6500);
+  };
+  const escapeHtml = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const fmtDate = s => s ? new Date(s+"T00:00:00").toLocaleDateString("en-PH") : "—";
+  if (!configured || !window.supabase) {
+    $("setupNotice").classList.remove("hidden");
+    $("loginForm").querySelector("button").disabled=true;
+  } else {
+    db = window.supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+  }
+  async function checkSession(){
+    if(!db) return;
+    const {data:{session}}=await db.auth.getSession();
+    setLoggedIn(!!session);
+    if(session) await loadData();
+  }
+  function setLoggedIn(on){
+    $("loginCard").classList.toggle("hidden",on);
+    $("appArea").classList.toggle("hidden",!on);
+    $("logoutBtn").classList.toggle("hidden",!on);
+  }
+  $("loginForm").addEventListener("submit",async e=>{
+    e.preventDefault(); if(!db)return;
+    const email=$("email").value.trim(), password=$("password").value;
+    const {error}=await db.auth.signInWithPassword({email,password});
+    if(error) return showMessage("Hindi makapag-login: "+error.message,"err");
+    setLoggedIn(true); await loadData(); showMessage("Matagumpay ang login.");
+  });
+  $("logoutBtn").addEventListener("click",async()=>{await db.auth.signOut();setLoggedIn(false);showMessage("Naka-log out na.");});
+  document.querySelectorAll("[data-tab]").forEach(btn=>btn.addEventListener("click",()=>{
+    document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b===btn));
+    ["register","records","vaccination"].forEach(t=>$("tab-"+t).classList.toggle("hidden",t!==btn.dataset.tab));
+  }));
+  async function loadData(){
+    if(!db)return;
+    const [o,d]=await Promise.all([
+      db.from("owners").select("*").order("created_at",{ascending:false}),
+      db.from("dogs").select("*, owners(full_name,purok,address,phone)").order("created_at",{ascending:false})
+    ]);
+    if(o.error || d.error) return showMessage("Hindi ma-load ang database. Tingnan ang SQL setup at permissions. "+(o.error?.message||d.error?.message),"err");
+    owners=o.data||[]; dogs=d.data||[];
+    $("ownerCount").textContent=owners.length;
+    $("dogCount").textContent=dogs.length;
+    $("vaccinatedCount").textContent=dogs.filter(x=>x.vaccination_status==="Vaccinated").length;
+    renderRecords();
+  }
+  function renderRecords(){
+    const q=($("searchInput").value||"").toLowerCase();
+    const filtered=dogs.filter(d=>[d.registration_no,d.dog_name,d.breed,d.color,d.owners?.full_name,d.owners?.purok,d.owners?.address].join(" ").toLowerCase().includes(q));
+    $("recordsBody").innerHTML=filtered.length?filtered.map(d=>{
+      const status=d.vaccination_status||"Unknown";
+      const badge=status==="Vaccinated"?"badge":status==="Unvaccinated"?"badge red":"badge warn";
+      return `<tr><td><strong>${escapeHtml(d.registration_no)}</strong></td><td>${escapeHtml(d.dog_name)}<br><span class="muted">${escapeHtml(d.breed||"Breed not specified")} • ${escapeHtml(d.sex||"—")}</span></td><td>${escapeHtml(d.owners?.full_name||"—")}<br><span class="muted">${escapeHtml(d.owners?.purok||"")}</span></td><td><span class="${badge}">${escapeHtml(status)}</span><br><span class="muted">Next: ${fmtDate(d.next_vaccination_date)}</span></td><td>${fmtDate(d.registration_date)}</td></tr>`;
+    }).join(""):'<tr><td colspan="5">Walang tugmang record.</td></tr>';
+  }
+  $("searchInput").addEventListener("input",renderRecords);
+  $("registrationForm").addEventListener("submit",async e=>{
+    e.preventDefault(); if(!db)return;
+    const f=new FormData(e.currentTarget), v=Object.fromEntries(f.entries());
+    try{
+      // Reuse an owner only when name, purok, and phone match exactly; staff should verify duplicates.
+      let owner=owners.find(o=>o.full_name.trim().toLowerCase()===v.owner_name.trim().toLowerCase() && (o.purok||"").trim().toLowerCase()===v.purok.trim().toLowerCase() && (o.phone||"").trim()===v.phone.trim());
+      if(!owner){
+        const {data,error}=await db.from("owners").insert({full_name:v.owner_name.trim(),phone:v.phone.trim()||null,purok:v.purok.trim(),address:v.address.trim()||null}).select().single();
+        if(error) throw error; owner=data;
+      }
+      const {error}=await db.from("dogs").insert({
+        owner_id:owner.id,dog_name:v.dog_name.trim(),breed:v.breed.trim()||null,sex:v.sex||null,color:v.color.trim()||null,
+        birth_date:v.birth_date||null,vaccination_status:v.vaccination_status,
+        vaccination_date:v.vaccination_date||null,next_vaccination_date:v.next_vaccination_date||null,
+        notes:v.notes.trim()||null
+      });
+      if(error) throw error;
+      e.currentTarget.reset(); await loadData(); showMessage("Na-save ang registration.");
+    }catch(err){showMessage("Hindi na-save: "+err.message,"err");}
+  });
+  $("vaccinationForm").addEventListener("submit",async e=>{
+    e.preventDefault(); if(!db)return;
+    const v=Object.fromEntries(new FormData(e.currentTarget).entries());
+    const dog=dogs.find(d=>d.registration_no.trim().toLowerCase()===v.registration_no.trim().toLowerCase());
+    if(!dog)return showMessage("Hindi makita ang registration number na iyon.","err");
+    const {error}=await db.from("dogs").update({
+      vaccination_status:v.vaccination_status,vaccination_date:v.vaccination_date||null,
+      next_vaccination_date:v.next_vaccination_date||null
+    }).eq("id",dog.id);
+    if(error)return showMessage("Hindi na-update: "+error.message,"err");
+    const {error:histError}=await db.from("vaccination_records").insert({
+      dog_id:dog.id,vaccine_type:v.vaccine_type.trim()||null,vaccination_date:v.vaccination_date||null,
+      next_vaccination_date:v.next_vaccination_date||null,vaccinator:v.vaccinator.trim()||null,notes:v.notes.trim()||null
+    });
+    await loadData(); e.currentTarget.reset();
+    if(histError) showMessage("Na-update ang status pero hindi na-save ang history: "+histError.message,"err");
+    else showMessage("Na-update ang vaccination at na-save ang history.");
+  });
+  $("exportBtn").addEventListener("click",()=>{
+    const rows=[["Registration No","Dog Name","Breed","Sex","Color","Owner","Phone","Purok","Address","Vaccination Status","Vaccination Date","Next Vaccination","Registration Date"],
+      ...dogs.map(d=>[d.registration_no,d.dog_name,d.breed,d.sex,d.color,d.owners?.full_name,d.owners?.phone,d.owners?.purok,d.owners?.address,d.vaccination_status,d.vaccination_date,d.next_vaccination_date,d.registration_date])];
+    const csv=rows.map(r=>r.map(x=>'"'+String(x??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");
+    const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"}), url=URL.createObjectURL(blob), a=document.createElement("a");
+    a.href=url;a.download="barangay-dog-registry.csv";a.click();URL.revokeObjectURL(url);
+  });
+  checkSession();
+})();
+</script>
+</body>
+</html>
