@@ -125,7 +125,9 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
   const configured = config.SUPABASE_URL && config.SUPABASE_ANON_KEY &&
     !config.SUPABASE_URL.includes("YOUR_PROJECT") && !config.SUPABASE_ANON_KEY.includes("YOUR_ANON");
   const $ = id => document.getElementById(id);
-  let db = null, dogs = [], owners = [];\n  const PHOTO_BUCKET = "dog-photos";\n  const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+  let db = null, dogs = [], owners = [];
+  const PHOTO_BUCKET = "dog-photos";
+  const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
   const showMessage = (text, type="ok") => {
     const el=$("message"); el.textContent=text; el.className=type; el.style.display="block";
     window.scrollTo({top:0,behavior:"smooth"}); setTimeout(()=>{el.style.display="none";},6500);
