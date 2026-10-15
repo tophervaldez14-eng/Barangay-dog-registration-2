@@ -170,7 +170,18 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
       db.from("dogs").select("*, owners(full_name,purok,address,phone)").order("created_at",{ascending:false})
     ]);
     if(o.error || d.error) return showMessage("Hindi ma-load ang database. Tingnan ang SQL setup at permissions. "+(o.error?.message||d.error?.message),"err");
-    owners=o.data||[]; dogs=d.data||[];
+owners=o.data||[];
+dogs=d.data||[];
+
+for (const dog of dogs) {
+  if (dog.photo_url) {
+    const { data, error } = await db.storage
+      .from(PHOTO_BUCKET)
+      .createSignedUrl(dog.photo_url, 3600);
+
+    dog.photo_display_url = error ? null : data.signedUrl;
+  }
+}
     $("ownerCount").textContent=owners.length;
     $("dogCount").textContent=dogs.length;
     $("vaccinatedCount").textContent=dogs.filter(x=>x.vaccination_status==="Vaccinated").length;
@@ -182,8 +193,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
     $("recordsBody").innerHTML=filtered.length?filtered.map(d=>{
       const status=d.vaccination_status||"Unknown";
       const badge=status==="Vaccinated"?"badge":status==="Unvaccinated"?"badge red":"badge warn";
-      return `<tr><td>${d.photo_url ? `<a href="${escapeHtml(d.photo_url)}" target="_blank" rel="noopener"><img class="dog-thumb" src="${escapeHtml(d.photo_url)}" alt="Larawan ni ${escapeHtml(d.dog_name)}" loading="lazy"></a>` : "—"}</td><td><strong>${escapeHtml(d.registration_no)}</strong></td><td>${escapeHtml(d.dog_name)}<br><span class="muted">${escapeHtml(d.breed||"Breed not specified")} • ${escapeHtml(d.sex||"—")}</span></td><td>${escapeHtml(d.owners?.full_name||"—")}<br><span class="muted">${escapeHtml(d.owners?.purok||"")}</span></td><td><span class="${badge}">${escapeHtml(status)}</span><br><span class="muted">Next: ${fmtDate(d.next_vaccination_date)}</span></td><td>${fmtDate(d.registration_date)}</td></tr>`;
-    }).join(""):'<tr><td colspan="5">Walang tugmang record.</td></tr>';
+     return `<tr><td>${d.photo_display_url ? `<a href="${escapeHtml(d.photo_display_url)}" target="_blank" rel="noopener"><img class="dog-thumb" src="${escapeHtml(d.photo_display_url)}" alt="Larawan ni ${escapeHtml(d.dog_name)}" loading="lazy"></a>` : "—"}</td><td><strong>${escapeHtml(d.registration_no)}</strong></td><td>${escapeHtml(d.dog_name)}<br><span class="muted">${escapeHtml(d.breed||"Breed not specified")} • ${escapeHtml(d.sex||"—")}</span></td><td>${escapeHtml(d.owners?.full_name||"—")}<br><span class="muted">${escapeHtml(d.owners?.purok||"")}</span></td><td><span class="${badge}">${escapeHtml(status)}</span><br><span class="muted">Next: ${fmtDate(d.next_vaccination_date)}</span></td><td>${fmtDate(d.registration_date)}</td></tr>`;
   }
   $("searchInput").addEventListener("input",renderRecords);
   $("dogPhoto").addEventListener("change",()=>{
