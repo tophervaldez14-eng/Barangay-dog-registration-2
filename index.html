@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#14532d">
-<title>Barangay Dog Registration</title>
+<title>Barangay Mijares Dog Registration</title>
 <style>
 :root{--green:#14532d;--green2:#166534;--bg:#f3f6f4;--card:#fff;--ink:#17221b;--muted:#65736a;--line:#dce5de;--red:#b42318;--gold:#a16207}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--ink)}
@@ -33,6 +33,7 @@ table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;b
 .tablewrap{overflow-x:auto}
 .badge{display:inline-block;border-radius:99px;padding:4px 8px;font-size:11px;font-weight:bold;background:#e7eee9;color:var(--green)}
 .badge.warn{background:#fff3d6;color:var(--gold)}.badge.red{background:#feeceb;color:var(--red)}
+.photo-preview{width:150px;height:120px;object-fit:cover;border:1px solid var(--line);border-radius:10px;background:#f7faf8;display:block;margin-top:8px}.dog-thumb{width:54px;height:54px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
 #message{position:sticky;top:0;z-index:5;padding:10px 14px;font-size:13px;display:none}
 #message.ok{display:block;background:#e3f7e9;color:#14532d}#message.err{display:block;background:#feeceb;color:#8c1d18}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
@@ -40,7 +41,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
 </style>
 </head>
 <body>
-<header><div class="head"><div><h1>🐕 Barangay Dog Registration</h1><p>Dog & Owner Registry • Prototype</p></div><button id="logoutBtn" class="secondary hidden">Log out</button></div></header>
+<header><div class="head"><div><h1>🐕 Barangay Mijares Dog Registration</h1><p>Dog & Owner Registry • Barangay Mijares</p></div><button id="logoutBtn" class="secondary hidden">Log out</button></div></header>
 <div id="message"></div>
 <main>
   <section id="setupNotice" class="notice hidden"><strong>Setup required:</strong> Ilagay muna ang Supabase Project URL at anon key sa file na <code>app-config.js</code>. Sundin ang README sa package.</section>
@@ -79,6 +80,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
         <h3>Impormasyon ng aso</h3>
         <div class="grid">
           <div class="field"><label>Pangalan ng aso *</label><input name="dog_name" required maxlength="100"></div>
+          <div class="field full"><label>Larawan ng aso (optional)</label><input id="dogPhoto" name="dog_photo" type="file" accept="image/jpeg,image/png,image/webp"><p class="muted">JPG, PNG, o WebP; hanggang 5 MB. Puwede ring pumili ng larawan mula sa cellphone.</p><img id="dogPhotoPreview" class="photo-preview hidden" alt="Preview ng larawan ng aso"></div>
           <div class="field"><label>Breed / Lahi</label><input name="breed" placeholder="Hal. Aspin" maxlength="100"></div>
           <div class="field"><label>Kasarian</label><select name="sex"><option value="">Pumili</option><option>Male</option><option>Female</option><option>Unknown</option></select></div>
           <div class="field"><label>Kulay / Marka</label><input name="color" maxlength="100"></div>
@@ -96,7 +98,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
       <div class="grid" style="margin-bottom:12px">
         <div class="field full"><label>Search by dog, owner, registration no. or purok</label><input id="searchInput" placeholder="Mag-type para maghanap..."></div>
       </div>
-      <div class="tablewrap"><table><thead><tr><th>Dog Reg. No.</th><th>Aso</th><th>Amo / Purok</th><th>Vaccination</th><th>Registered</th></tr></thead><tbody id="recordsBody"><tr><td colspan="5">Mag-login para makita ang records.</td></tr></tbody></table></div>
+      <div class="tablewrap"><table><thead><tr><th>Litrato</th><th>Dog Reg. No.</th><th>Aso</th><th>Amo / Purok</th><th>Vaccination</th><th>Registered</th></tr></thead><tbody id="recordsBody"><tr><td colspan="6">Mag-login para makita ang records.</td></tr></tbody></table></div>
     </section>
     <section id="tab-vaccination" class="card hidden">
       <h2>Update vaccination status</h2>
@@ -123,7 +125,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
   const configured = config.SUPABASE_URL && config.SUPABASE_ANON_KEY &&
     !config.SUPABASE_URL.includes("YOUR_PROJECT") && !config.SUPABASE_ANON_KEY.includes("YOUR_ANON");
   const $ = id => document.getElementById(id);
-  let db = null, dogs = [], owners = [];
+  let db = null, dogs = [], owners = [];\n  const PHOTO_BUCKET = "dog-photos";\n  const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
   const showMessage = (text, type="ok") => {
     const el=$("message"); el.textContent=text; el.className=type; el.style.display="block";
     window.scrollTo({top:0,behavior:"smooth"}); setTimeout(()=>{el.style.display="none";},6500);
@@ -178,10 +180,19 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
     $("recordsBody").innerHTML=filtered.length?filtered.map(d=>{
       const status=d.vaccination_status||"Unknown";
       const badge=status==="Vaccinated"?"badge":status==="Unvaccinated"?"badge red":"badge warn";
-      return `<tr><td><strong>${escapeHtml(d.registration_no)}</strong></td><td>${escapeHtml(d.dog_name)}<br><span class="muted">${escapeHtml(d.breed||"Breed not specified")} • ${escapeHtml(d.sex||"—")}</span></td><td>${escapeHtml(d.owners?.full_name||"—")}<br><span class="muted">${escapeHtml(d.owners?.purok||"")}</span></td><td><span class="${badge}">${escapeHtml(status)}</span><br><span class="muted">Next: ${fmtDate(d.next_vaccination_date)}</span></td><td>${fmtDate(d.registration_date)}</td></tr>`;
+      return `<tr><td>${d.photo_url ? `<a href="${escapeHtml(d.photo_url)}" target="_blank" rel="noopener"><img class="dog-thumb" src="${escapeHtml(d.photo_url)}" alt="Larawan ni ${escapeHtml(d.dog_name)}" loading="lazy"></a>` : "—"}</td><td><strong>${escapeHtml(d.registration_no)}</strong></td><td>${escapeHtml(d.dog_name)}<br><span class="muted">${escapeHtml(d.breed||"Breed not specified")} • ${escapeHtml(d.sex||"—")}</span></td><td>${escapeHtml(d.owners?.full_name||"—")}<br><span class="muted">${escapeHtml(d.owners?.purok||"")}</span></td><td><span class="${badge}">${escapeHtml(status)}</span><br><span class="muted">Next: ${fmtDate(d.next_vaccination_date)}</span></td><td>${fmtDate(d.registration_date)}</td></tr>`;
     }).join(""):'<tr><td colspan="5">Walang tugmang record.</td></tr>';
   }
   $("searchInput").addEventListener("input",renderRecords);
+  $("dogPhoto").addEventListener("change",()=>{
+    const file=$("dogPhoto").files[0], preview=$("dogPhotoPreview");
+    if(!file){preview.removeAttribute("src");preview.classList.add("hidden");return;}
+    if(!["image/jpeg","image/png","image/webp"].includes(file.type) || file.size>MAX_PHOTO_BYTES){
+      $("dogPhoto").value="";preview.removeAttribute("src");preview.classList.add("hidden");
+      return showMessage("Pumili ng JPG, PNG, o WebP na larawan na hanggang 5 MB.","err");
+    }
+    preview.src=URL.createObjectURL(file);preview.classList.remove("hidden");
+  });
   $("registrationForm").addEventListener("submit",async e=>{
     e.preventDefault(); if(!db)return;
     const f=new FormData(e.currentTarget), v=Object.fromEntries(f.entries());
@@ -192,11 +203,22 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
         const {data,error}=await db.from("owners").insert({full_name:v.owner_name.trim(),phone:v.phone.trim()||null,purok:v.purok.trim(),address:v.address.trim()||null}).select().single();
         if(error) throw error; owner=data;
       }
+      let photoUrl=null;
+      const photoFile=$("dogPhoto").files[0];
+      if(photoFile){
+        if(!["image/jpeg","image/png","image/webp"].includes(photoFile.type) || photoFile.size>MAX_PHOTO_BYTES)
+          throw new Error("Pumili ng JPG, PNG, o WebP na larawan na hanggang 5 MB.");
+        const ext=photoFile.type==="image/png"?"png":photoFile.type==="image/webp"?"webp":"jpg";
+        const filePath=`${owner.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+        const {error:uploadError}=await db.storage.from(PHOTO_BUCKET).upload(filePath,photoFile,{contentType:photoFile.type,upsert:false});
+        if(uploadError) throw new Error("Hindi na-upload ang larawan. Tiyaking may dog-photos bucket at tamang Storage policies. "+uploadError.message);
+        photoUrl=db.storage.from(PHOTO_BUCKET).getPublicUrl(filePath).data.publicUrl;
+      }
       const {error}=await db.from("dogs").insert({
         owner_id:owner.id,dog_name:v.dog_name.trim(),breed:v.breed.trim()||null,sex:v.sex||null,color:v.color.trim()||null,
         birth_date:v.birth_date||null,vaccination_status:v.vaccination_status,
         vaccination_date:v.vaccination_date||null,next_vaccination_date:v.next_vaccination_date||null,
-        notes:v.notes.trim()||null
+        notes:v.notes.trim()||null,photo_url:photoUrl
       });
       if(error) throw error;
       e.currentTarget.reset(); await loadData(); showMessage("Na-save ang registration.");
