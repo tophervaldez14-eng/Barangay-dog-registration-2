@@ -195,7 +195,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
     }
     preview.src=URL.createObjectURL(file);preview.classList.remove("hidden");
   });
-  $("registrationForm").addEventListener("submit",async e=>{
+$("registrationForm").addEventListener("submit",async e=>{
+    const form = e.currentTarget;
     e.preventDefault(); if(!db)return;
     const f=new FormData(e.currentTarget), v=Object.fromEntries(f.entries());
     try{
@@ -223,7 +224,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
         notes:v.notes.trim()||null,photo_url:photoUrl
       });
       if(error) throw error;
-      e.currentTarget.reset(); await loadData(); showMessage("Na-save ang registration.");
+form.reset(); await loadData(); showMessage("Na-save ang registration.");
     }catch(err){showMessage("Hindi na-save: "+err.message,"err");}
   });
   $("vaccinationForm").addEventListener("submit",async e=>{
