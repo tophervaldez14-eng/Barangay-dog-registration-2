@@ -134,25 +134,35 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
   };
   const escapeHtml = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const fmtDate = s => s ? new Date(s+"T00:00:00").toLocaleDateString("en-PH") : "—";
-  // Supports both new object paths and older records that stored a Supabase public URL.
+  // Normalize current object paths and legacy Supabase public/signed URLs.
+  // The bucket stays private; photos use short-lived signed URLs.
   function getPhotoObjectPath(value){
     if(!value || typeof value !== "string") return null;
-    let path=value.trim();
-    if(/^https?:\/\//i.test(path)){
-      try{
-        const url=new URL(path);
-        const marker=`/storage/v1/object/public/${PHOTO_BUCKET}/`;
-        const signedMarker=`/storage/v1/object/sign/${PHOTO_BUCKET}/`;
-        if(url.pathname.includes(marker)) path=url.pathname.split(marker).pop();
-        else if(url.pathname.includes(signedMarker)) path=url.pathname.split(signedMarker).pop();
-        else return null;
-        path=decodeURIComponent(path);
-      }catch(_){ return null; }
+    let raw=value.trim();
+    let path=raw;
+
+    if(/^https?:\/\//i.test(raw)){
+      try { path = new URL(raw).pathname; }
+      catch (_) { return null; }
     }
-    path=path.replace(/^\/+/,"");
-    if(path.startsWith(`${PHOTO_BUCKET}/`)) path=path.slice(PHOTO_BUCKET.length+1);
-    return path && !path.includes("..") ? path : null;
+
+    // Handles public/signed URLs and values that accidentally contain a URL plus bucket path.
+    const decodedPath = path.replace(/%2F/gi, "/");
+    const match = decodedPath.match(/\/storage\/v1\/object\/(?:public|sign)\/(?:dog-photos|dog%20photos|dog photos)\/(.+?)(?:\?|$)/i);
+    if(match) {
+      path=match[1];
+    } else {
+      path=decodedPath.replace(/^\/+/, "");
+      path=path.replace(/^(?:dog-photos|dog%20photos|dog photos)\//i, "");
+      if(/^https?:\/\//i.test(path) || path.includes("/storage/v1/object/")) return null;
+    }
+
+    try { path = decodeURIComponent(path); } catch (_) {}
+    path=path.replace(/^\/+/, "").split("?")[0];
+    if(!path || path.split("/").some(part=>part===".." || part==="")) return null;
+    return path;
   }
+
   if (!configured || !window.supabase) {
     $("setupNotice").classList.remove("hidden");
     $("loginForm").querySelector("button").disabled=true;
@@ -195,10 +205,16 @@ dogs=d.data||[];
 for (const dog of dogs) {
       dog.photo_display_url = null;
       const objectPath = getPhotoObjectPath(dog.photo_url);
-      if (!objectPath) continue;
+      if (!objectPath) {
+        if (dog.photo_url) console.warn("Hindi makuha ang object path para sa larawan:", dog.registration_no, dog.photo_url);
+        continue;
+      }
       const { data, error } = await db.storage.from(PHOTO_BUCKET).createSignedUrl(objectPath, 3600);
-      if (!error && data?.signedUrl) dog.photo_display_url = data.signedUrl;
-      else console.warn("Hindi ma-load ang dog photo:", dog.registration_no, error?.message || "No signed URL returned");
+      if (!error && data?.signedUrl) {
+        dog.photo_display_url = data.signedUrl;
+      } else {
+        console.warn("Hindi ma-load ang dog photo:", dog.registration_no, "Object path:", objectPath, error?.message || "No signed URL returned");
+      }
     }
     $("ownerCount").textContent=owners.length;
     $("dogCount").textContent=dogs.length;
