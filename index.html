@@ -23,7 +23,7 @@ input,select,textarea{width:100%;padding:11px 10px;border:1px solid #cbd7ce;bord
 textarea{min-height:70px;resize:vertical}
 .field{min-width:0}.full{grid-column:1/-1}
 button{border:0;border-radius:8px;padding:11px 14px;font-size:14px;font-weight:700;cursor:pointer;background:var(--green2);color:white}
-button.secondary{background:#e7eee9;color:var(--green)}button.danger{background:#fff0ee;color:var(--red)}button:disabled{opacity:.5;cursor:not-allowed}
+button.secondary{background:#e7eee9;color:var(--green)}button.danger{background:#fff0ee;color:var(--red)}button.small{padding:7px 9px;font-size:12px}button:disabled{opacity:.5;cursor:not-allowed}
 .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .hidden{display:none!important}
@@ -98,7 +98,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
       <div class="grid" style="margin-bottom:12px">
         <div class="field full"><label>Search by dog, owner, registration no. or purok</label><input id="searchInput" placeholder="Mag-type para maghanap..."></div>
       </div>
-      <div class="tablewrap"><table><thead><tr><th>Litrato</th><th>Dog Reg. No.</th><th>Aso</th><th>Amo / Purok</th><th>Vaccination</th><th>Registered</th></tr></thead><tbody id="recordsBody"><tr><td colspan="6">Mag-login para makita ang records.</td></tr></tbody></table></div>
+      <div class="tablewrap"><table><thead><tr><th>Litrato</th><th>Dog Reg. No.</th><th>Aso</th><th>Amo / Purok</th><th>Vaccination</th><th>Registered</th><th>Actions</th></tr></thead><tbody id="recordsBody"><tr><td colspan="7">Mag-login para makita ang records.</td></tr></tbody></table></div>
     </section>
     <section id="tab-vaccination" class="card hidden">
       <h2>Update vaccination status</h2>
@@ -227,10 +227,45 @@ for (const dog of dogs) {
     $("recordsBody").innerHTML=filtered.length?filtered.map(d=>{
       const status=d.vaccination_status||"Unknown";
       const badge=status==="Vaccinated"?"badge":status==="Unvaccinated"?"badge red":"badge warn";
-      return `<tr><td>${d.photo_display_url ? `<a href="${escapeHtml(d.photo_display_url)}" target="_blank" rel="noopener"><img class="dog-thumb" src="${escapeHtml(d.photo_display_url)}" alt="Larawan ni ${escapeHtml(d.dog_name)}" loading="lazy"></a>` : "—"}</td><td><strong>${escapeHtml(d.registration_no)}</strong></td><td>${escapeHtml(d.dog_name)}<br><span class="muted">${escapeHtml(d.breed||"Breed not specified")} • ${escapeHtml(d.sex||"—")}</span></td><td>${escapeHtml(d.owners?.full_name||"—")}<br><span class="muted">${escapeHtml(d.owners?.purok||"")}</span></td><td><span class="${badge}">${escapeHtml(status)}</span><br><span class="muted">Next: ${fmtDate(d.next_vaccination_date)}</span></td><td>${fmtDate(d.registration_date)}</td></tr>`;
-    }).join(""):'<tr><td colspan="6">Walang tugmang record.</td></tr>';
+      return `<tr><td>${d.photo_display_url ? `<a href="${escapeHtml(d.photo_display_url)}" target="_blank" rel="noopener"><img class="dog-thumb" src="${escapeHtml(d.photo_display_url)}" alt="Larawan ni ${escapeHtml(d.dog_name)}" loading="lazy"></a>` : "—"}</td><td><strong>${escapeHtml(d.registration_no)}</strong></td><td>${escapeHtml(d.dog_name)}<br><span class="muted">${escapeHtml(d.breed||"Breed not specified")} • ${escapeHtml(d.sex||"—")}</span></td><td>${escapeHtml(d.owners?.full_name||"—")}<br><span class="muted">${escapeHtml(d.owners?.purok||"")}</span></td><td><span class="${badge}">${escapeHtml(status)}</span><br><span class="muted">Next: ${fmtDate(d.next_vaccination_date)}</span></td><td>${fmtDate(d.registration_date)}</td><td><button type="button" class="danger small delete-dog-btn" data-dog-id="${escapeHtml(d.id)}" data-dog-name="${escapeHtml(d.dog_name)}">Delete</button></td></tr>`;
+    }).join(""):'<tr><td colspan="7">Walang tugmang record.</td></tr>';
 }
 $("searchInput").addEventListener("input",renderRecords);
+
+  // Delete one dog registration, its vaccination history, and its stored photo (if present).
+  $("recordsBody").addEventListener("click", async event => {
+    const button = event.target.closest(".delete-dog-btn");
+    if (!button) return;
+    const dog = dogs.find(item => String(item.id) === button.dataset.dogId);
+    if (!dog) return showMessage("Hindi na makita ang record na ito. I-refresh ang listahan.", "err");
+    const confirmed = window.confirm(`Sigurado ka bang buburahin ang dog record na ito?\n\nRegistration No.: ${dog.registration_no}\nPangalan: ${dog.dog_name}\n\nKasama sa tatanggalin ang vaccination history ng asong ito. Hindi mabubura ang owner record.`);
+    if (!confirmed) return;
+
+    button.disabled = true;
+    button.textContent = "Deleting…";
+    try {
+      // Remove child vaccination records first to avoid foreign-key conflicts.
+      const { error: historyError } = await db.from("vaccination_records").delete().eq("dog_id", dog.id);
+      if (historyError) throw new Error("Hindi natanggal ang vaccination history: " + historyError.message);
+
+      const { error: dogError } = await db.from("dogs").delete().eq("id", dog.id);
+      if (dogError) throw new Error("Hindi natanggal ang dog record: " + dogError.message);
+
+      let photoWarning = "";
+      const photoPath = getPhotoObjectPath(dog.photo_url);
+      if (photoPath) {
+        const { error: photoError } = await db.storage.from(PHOTO_BUCKET).remove([photoPath]);
+        if (photoError) photoWarning = " Naitanggal ang record pero maaaring naiwan ang photo file sa Storage: " + photoError.message;
+      }
+      await loadData();
+      showMessage("Nabura ang dog record at vaccination history." + photoWarning, photoWarning ? "err" : "ok");
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = "Delete";
+      showMessage("Hindi natanggal ang record: " + (error?.message || error), "err");
+      await loadData();
+    }
+  });
 
   $("dogPhoto").addEventListener("change",()=>{
     const file=$("dogPhoto").files[0];
