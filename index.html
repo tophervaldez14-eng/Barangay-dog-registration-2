@@ -196,13 +196,26 @@ for (const dog of dogs) {
       return `<tr><td>${d.photo_display_url ? `<a href="${escapeHtml(d.photo_display_url)}" target="_blank" rel="noopener"><img class="dog-thumb" src="${escapeHtml(d.photo_display_url)}" alt="Larawan ni ${escapeHtml(d.dog_name)}" loading="lazy"></a>` : "—"}</td><td><strong>${escapeHtml(d.registration_no)}</strong></td><td>${escapeHtml(d.dog_name)}<br><span class="muted">${escapeHtml(d.breed||"Breed not specified")} • ${escapeHtml(d.sex||"—")}</span></td><td>${escapeHtml(d.owners?.full_name||"—")}<br><span class="muted">${escapeHtml(d.owners?.purok||"")}</span></td><td><span class="${badge}">${escapeHtml(status)}</span><br><span class="muted">Next: ${fmtDate(d.next_vaccination_date)}</span></td><td>${fmtDate(d.registration_date)}</td></tr>`;
     }).join(""):'<tr><td colspan="6">Walang tugmang record.</td></tr>';
 }
-$("searchInput").addEventListener("input",renderRecords);
-    if(!file){preview.removeAttribute("src");preview.classList.add("hidden");return;}
+  $("searchInput").addEventListener("input",renderRecords);
+
+  $("dogPhoto").addEventListener("change",()=>{
+    const file=$("dogPhoto").files[0], preview=$("dogPhotoPreview");
+
+    if(!file){
+      preview.removeAttribute("src");
+      preview.classList.add("hidden");
+      return;
+    }
+
     if(!["image/jpeg","image/png","image/webp"].includes(file.type) || file.size>MAX_PHOTO_BYTES){
-      $("dogPhoto").value="";preview.removeAttribute("src");preview.classList.add("hidden");
+      $("dogPhoto").value="";
+      preview.removeAttribute("src");
+      preview.classList.add("hidden");
       return showMessage("Pumili ng JPG, PNG, o WebP na larawan na hanggang 5 MB.","err");
     }
-    preview.src=URL.createObjectURL(file);preview.classList.remove("hidden");
+
+    preview.src=URL.createObjectURL(file);
+    preview.classList.remove("hidden");
   });
 $("registrationForm").addEventListener("submit",async e=>{
     const form = e.currentTarget;
