@@ -134,6 +134,25 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
   };
   const escapeHtml = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const fmtDate = s => s ? new Date(s+"T00:00:00").toLocaleDateString("en-PH") : "—";
+  // Supports both new object paths and older records that stored a Supabase public URL.
+  function getPhotoObjectPath(value){
+    if(!value || typeof value !== "string") return null;
+    let path=value.trim();
+    if(/^https?:\/\//i.test(path)){
+      try{
+        const url=new URL(path);
+        const marker=`/storage/v1/object/public/${PHOTO_BUCKET}/`;
+        const signedMarker=`/storage/v1/object/sign/${PHOTO_BUCKET}/`;
+        if(url.pathname.includes(marker)) path=url.pathname.split(marker).pop();
+        else if(url.pathname.includes(signedMarker)) path=url.pathname.split(signedMarker).pop();
+        else return null;
+        path=decodeURIComponent(path);
+      }catch(_){ return null; }
+    }
+    path=path.replace(/^\/+/,"");
+    if(path.startsWith(`${PHOTO_BUCKET}/`)) path=path.slice(PHOTO_BUCKET.length+1);
+    return path && !path.includes("..") ? path : null;
+  }
   if (!configured || !window.supabase) {
     $("setupNotice").classList.remove("hidden");
     $("loginForm").querySelector("button").disabled=true;
@@ -174,14 +193,13 @@ owners=o.data||[];
 dogs=d.data||[];
 
 for (const dog of dogs) {
-  if (dog.photo_url) {
-    const { data, error } = await db.storage
-      .from(PHOTO_BUCKET)
-      .createSignedUrl(dog.photo_url, 3600);
-
-    dog.photo_display_url = error ? null : data.signedUrl;
-  }
-}
+      dog.photo_display_url = null;
+      const objectPath = getPhotoObjectPath(dog.photo_url);
+      if (!objectPath) continue;
+      const { data, error } = await db.storage.from(PHOTO_BUCKET).createSignedUrl(objectPath, 3600);
+      if (!error && data?.signedUrl) dog.photo_display_url = data.signedUrl;
+      else console.warn("Hindi ma-load ang dog photo:", dog.registration_no, error?.message || "No signed URL returned");
+    }
     $("ownerCount").textContent=owners.length;
     $("dogCount").textContent=dogs.length;
     $("vaccinatedCount").textContent=dogs.filter(x=>x.vaccination_status==="Vaccinated").length;
@@ -196,28 +214,26 @@ for (const dog of dogs) {
       return `<tr><td>${d.photo_display_url ? `<a href="${escapeHtml(d.photo_display_url)}" target="_blank" rel="noopener"><img class="dog-thumb" src="${escapeHtml(d.photo_display_url)}" alt="Larawan ni ${escapeHtml(d.dog_name)}" loading="lazy"></a>` : "—"}</td><td><strong>${escapeHtml(d.registration_no)}</strong></td><td>${escapeHtml(d.dog_name)}<br><span class="muted">${escapeHtml(d.breed||"Breed not specified")} • ${escapeHtml(d.sex||"—")}</span></td><td>${escapeHtml(d.owners?.full_name||"—")}<br><span class="muted">${escapeHtml(d.owners?.purok||"")}</span></td><td><span class="${badge}">${escapeHtml(status)}</span><br><span class="muted">Next: ${fmtDate(d.next_vaccination_date)}</span></td><td>${fmtDate(d.registration_date)}</td></tr>`;
     }).join(""):'<tr><td colspan="6">Walang tugmang record.</td></tr>';
 }
-  $("searchInput").addEventListener("input",renderRecords);
+$("searchInput").addEventListener("input",renderRecords);
 
   $("dogPhoto").addEventListener("change",()=>{
-    const file=$("dogPhoto").files[0], preview=$("dogPhotoPreview");
-
+    const file=$("dogPhoto").files[0];
+    const preview=$("dogPhotoPreview");
     if(!file){
       preview.removeAttribute("src");
       preview.classList.add("hidden");
       return;
     }
-
     if(!["image/jpeg","image/png","image/webp"].includes(file.type) || file.size>MAX_PHOTO_BYTES){
       $("dogPhoto").value="";
       preview.removeAttribute("src");
       preview.classList.add("hidden");
       return showMessage("Pumili ng JPG, PNG, o WebP na larawan na hanggang 5 MB.","err");
     }
-
     preview.src=URL.createObjectURL(file);
     preview.classList.remove("hidden");
   });
-$("registrationForm").addEventListener("submit",async e=>{
+  $("registrationForm").addEventListener("submit",async e=>{
     const form = e.currentTarget;
     e.preventDefault(); if(!db)return;
     const f=new FormData(e.currentTarget), v=Object.fromEntries(f.entries());
@@ -237,7 +253,7 @@ $("registrationForm").addEventListener("submit",async e=>{
         const filePath=`${owner.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
         const {error:uploadError}=await db.storage.from(PHOTO_BUCKET).upload(filePath,photoFile,{contentType:photoFile.type,upsert:false});
         if(uploadError) throw new Error("Hindi na-upload ang larawan. Tiyaking may dog-photos bucket at tamang Storage policies. "+uploadError.message);
-        photoUrl=db.storage.from(PHOTO_BUCKET).getPublicUrl(filePath).data.publicUrl;
+        photoUrl=filePath;
       }
       const {error}=await db.from("dogs").insert({
         owner_id:owner.id,dog_name:v.dog_name.trim(),breed:v.breed.trim()||null,sex:v.sex||null,color:v.color.trim()||null,
@@ -251,7 +267,8 @@ form.reset(); await loadData(); showMessage("Na-save ang registration.");
   });
   $("vaccinationForm").addEventListener("submit",async e=>{
     e.preventDefault(); if(!db)return;
-    const v=Object.fromEntries(new FormData(e.currentTarget).entries());
+    const form=e.currentTarget;
+    const v=Object.fromEntries(new FormData(form).entries());
     const dog=dogs.find(d=>d.registration_no.trim().toLowerCase()===v.registration_no.trim().toLowerCase());
     if(!dog)return showMessage("Hindi makita ang registration number na iyon.","err");
     const {error}=await db.from("dogs").update({
@@ -263,7 +280,7 @@ form.reset(); await loadData(); showMessage("Na-save ang registration.");
       dog_id:dog.id,vaccine_type:v.vaccine_type.trim()||null,vaccination_date:v.vaccination_date||null,
       next_vaccination_date:v.next_vaccination_date||null,vaccinator:v.vaccinator.trim()||null,notes:v.notes.trim()||null
     });
-    await loadData(); e.currentTarget.reset();
+    form.reset(); await loadData();
     if(histError) showMessage("Na-update ang status pero hindi na-save ang history: "+histError.message,"err");
     else showMessage("Na-update ang vaccination at na-save ang history.");
   });
