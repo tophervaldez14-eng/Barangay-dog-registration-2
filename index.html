@@ -23,7 +23,7 @@ input,select,textarea{width:100%;padding:11px 10px;border:1px solid #cbd7ce;bord
 textarea{min-height:70px;resize:vertical}
 .field{min-width:0}.full{grid-column:1/-1}
 button{border:0;border-radius:8px;padding:11px 14px;font-size:14px;font-weight:700;cursor:pointer;background:var(--green2);color:white}
-button.secondary{background:#e7eee9;color:var(--green)}button.danger{background:#fff0ee;color:var(--red)}button.small{padding:7px 9px;font-size:12px}button:disabled{opacity:.5;cursor:not-allowed}
+button.secondary{background:#e7eee9;color:var(--green)}button.danger{background:#fff0ee;color:var(--red)}button:disabled{opacity:.5;cursor:not-allowed}
 .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .hidden{display:none!important}
@@ -71,16 +71,21 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
       <form id="registrationForm">
         <h3>Impormasyon ng amo</h3>
         <div class="grid">
-          <div class="field"><label>Buong pangalan *</label><input name="owner_name" required maxlength="150"></div>
-          <div class="field"><label>Contact number</label><input name="phone" inputmode="tel" maxlength="40"></div>
-          <div class="field"><label>Purok / Sitio *</label><input name="purok" required maxlength="100"></div>
-          <div class="field"><label>Address</label><input name="address" maxlength="250"></div>
+          <div class="field full"><label for="ownerMode">Owner registration option *</label>
+            <select id="ownerMode" name="owner_mode"><option value="new">Bagong amo — register owner and dog</option><option value="existing">Existing owner — add another dog</option></select>
+            <p class="muted">Kung nakarehistro na ang amo, piliin ang “Existing owner” para hindi na gumawa ng duplicate owner record.</p>
+          </div>
+          <div class="field full hidden" id="existingOwnerField"><label for="existingOwnerId">Piliin ang registered owner *</label><select id="existingOwnerId" name="existing_owner_id"><option value="">Pumili ng amo...</option></select></div>
+          <div class="field" id="ownerNameField"><label>Buong pangalan *</label><input name="owner_name" required maxlength="150"></div>
+          <div class="field" id="ownerPhoneField"><label>Contact number</label><input name="phone" inputmode="tel" maxlength="40"></div>
+          <div class="field" id="ownerPurokField"><label>Purok / Sitio *</label><input name="purok" required maxlength="100"></div>
+          <div class="field" id="ownerAddressField"><label>Address</label><input name="address" maxlength="250"></div>
         </div>
         <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
         <h3>Impormasyon ng aso</h3>
         <div class="grid">
           <div class="field"><label>Pangalan ng aso *</label><input name="dog_name" required maxlength="100"></div>
-          <div class="field full"><label>Larawan ng aso (optional)</label><input id="dogPhoto" name="dog_photo" type="file" accept="image/*" capture="environment"><p class="muted">Sa cellphone, piliin ang camera kung available. Sa computer, puwedeng pumili ng file. JPG, PNG, o WebP hanggang 5 MB.</p><img id="dogPhotoPreview" class="photo-preview hidden" alt="Preview ng larawan ng aso"></div>
+          <div class="field full"><label>Larawan ng aso (optional)</label><input id="dogPhoto" name="dog_photo" type="file" accept="image/jpeg,image/png,image/webp"><p class="muted">JPG, PNG, o WebP; hanggang 5 MB. Puwede ring pumili ng larawan mula sa cellphone.</p><img id="dogPhotoPreview" class="photo-preview hidden" alt="Preview ng larawan ng aso"></div>
           <div class="field"><label>Breed / Lahi</label><input name="breed" placeholder="Hal. Aspin" maxlength="100"></div>
           <div class="field"><label>Kasarian</label><select name="sex"><option value="">Pumili</option><option>Male</option><option>Female</option><option>Unknown</option></select></div>
           <div class="field"><label>Kulay / Marka</label><input name="color" maxlength="100"></div>
@@ -90,7 +95,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
           <div class="field"><label>Susunod na bakuna</label><input name="next_vaccination_date" type="date"></div>
           <div class="field full"><label>Notes</label><textarea name="notes" placeholder="Karagdagang impormasyon (optional)"></textarea></div>
         </div>
-        <div class="actions"><button id="saveRegistrationBtn" type="submit">Save registration</button><button id="cancelEditBtn" type="button" class="secondary hidden">Cancel edit</button><button type="reset" class="secondary">Clear form</button></div>
+        <div class="actions"><button type="submit">Save registration</button><button type="reset" class="secondary">Clear form</button></div>
       </form>
     </section>
     <section id="tab-records" class="card hidden">
@@ -98,7 +103,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
       <div class="grid" style="margin-bottom:12px">
         <div class="field full"><label>Search by dog, owner, registration no. or purok</label><input id="searchInput" placeholder="Mag-type para maghanap..."></div>
       </div>
-      <div class="tablewrap"><table><thead><tr><th>Litrato</th><th>Dog Reg. No.</th><th>Aso</th><th>Amo / Purok</th><th>Vaccination</th><th>Registered</th><th>Actions</th></tr></thead><tbody id="recordsBody"><tr><td colspan="7">Mag-login para makita ang records.</td></tr></tbody></table></div>
+      <div class="tablewrap"><table><thead><tr><th>Litrato</th><th>Dog Reg. No.</th><th>Aso</th><th>Amo / Purok</th><th>Vaccination</th><th>Registered</th></tr></thead><tbody id="recordsBody"><tr><td colspan="6">Mag-login para makita ang records.</td></tr></tbody></table></div>
     </section>
     <section id="tab-vaccination" class="card hidden">
       <h2>Update vaccination status</h2>
@@ -125,7 +130,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
   const configured = config.SUPABASE_URL && config.SUPABASE_ANON_KEY &&
     !config.SUPABASE_URL.includes("YOUR_PROJECT") && !config.SUPABASE_ANON_KEY.includes("YOUR_ANON");
   const $ = id => document.getElementById(id);
-  let db = null, dogs = [], owners = [], editingDogId = null;
+  let db = null, dogs = [], owners = [];
   const PHOTO_BUCKET = "dog-photos";
   const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
   const showMessage = (text, type="ok") => {
@@ -134,35 +139,25 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
   };
   const escapeHtml = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const fmtDate = s => s ? new Date(s+"T00:00:00").toLocaleDateString("en-PH") : "—";
-  // Normalize current object paths and legacy Supabase public/signed URLs.
-  // The bucket stays private; photos use short-lived signed URLs.
+  // Supports both new object paths and older records that stored a Supabase public URL.
   function getPhotoObjectPath(value){
     if(!value || typeof value !== "string") return null;
-    let raw=value.trim();
-    let path=raw;
-
-    if(/^https?:\/\//i.test(raw)){
-      try { path = new URL(raw).pathname; }
-      catch (_) { return null; }
+    let path=value.trim();
+    if(/^https?:\/\//i.test(path)){
+      try{
+        const url=new URL(path);
+        const marker=`/storage/v1/object/public/${PHOTO_BUCKET}/`;
+        const signedMarker=`/storage/v1/object/sign/${PHOTO_BUCKET}/`;
+        if(url.pathname.includes(marker)) path=url.pathname.split(marker).pop();
+        else if(url.pathname.includes(signedMarker)) path=url.pathname.split(signedMarker).pop();
+        else return null;
+        path=decodeURIComponent(path);
+      }catch(_){ return null; }
     }
-
-    // Handles public/signed URLs and values that accidentally contain a URL plus bucket path.
-    const decodedPath = path.replace(/%2F/gi, "/");
-    const match = decodedPath.match(/\/storage\/v1\/object\/(?:public|sign)\/(?:dog-photos|dog%20photos|dog photos)\/(.+?)(?:\?|$)/i);
-    if(match) {
-      path=match[1];
-    } else {
-      path=decodedPath.replace(/^\/+/, "");
-      path=path.replace(/^(?:dog-photos|dog%20photos|dog photos)\//i, "");
-      if(/^https?:\/\//i.test(path) || path.includes("/storage/v1/object/")) return null;
-    }
-
-    try { path = decodeURIComponent(path); } catch (_) {}
-    path=path.replace(/^\/+/, "").split("?")[0];
-    if(!path || path.split("/").some(part=>part===".." || part==="")) return null;
-    return path;
+    path=path.replace(/^\/+/,"");
+    if(path.startsWith(`${PHOTO_BUCKET}/`)) path=path.slice(PHOTO_BUCKET.length+1);
+    return path && !path.includes("..") ? path : null;
   }
-
   if (!configured || !window.supabase) {
     $("setupNotice").classList.remove("hidden");
     $("loginForm").querySelector("button").disabled=true;
@@ -201,24 +196,17 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
     if(o.error || d.error) return showMessage("Hindi ma-load ang database. Tingnan ang SQL setup at permissions. "+(o.error?.message||d.error?.message),"err");
 owners=o.data||[];
 dogs=d.data||[];
+    refreshOwnerOptions();
 
 for (const dog of dogs) {
       dog.photo_display_url = null;
       const objectPath = getPhotoObjectPath(dog.photo_url);
-      if (!objectPath) {
-        if (dog.photo_url) console.warn("Hindi makuha ang object path para sa larawan:", dog.registration_no, dog.photo_url);
-        continue;
-      }
+      if (!objectPath) continue;
       const { data, error } = await db.storage.from(PHOTO_BUCKET).createSignedUrl(objectPath, 3600);
-      if (!error && data?.signedUrl) {
-        dog.photo_display_url = data.signedUrl;
-      } else {
-        console.warn("Hindi ma-load ang dog photo:", dog.registration_no, "Object path:", objectPath, error?.message || "No signed URL returned");
-      }
+      if (!error && data?.signedUrl) dog.photo_display_url = data.signedUrl;
+      else console.warn("Hindi ma-load ang dog photo:", dog.registration_no, error?.message || "No signed URL returned");
     }
-    // Count only distinct owners who currently have at least one registered dog.
-    const registeredOwnerIds = new Set(dogs.map(d => d.owner_id).filter(Boolean));
-    $("ownerCount").textContent=registeredOwnerIds.size;
+    $("ownerCount").textContent=owners.length;
     $("dogCount").textContent=dogs.length;
     $("vaccinatedCount").textContent=dogs.filter(x=>x.vaccination_status==="Vaccinated").length;
     renderRecords();
@@ -229,101 +217,35 @@ for (const dog of dogs) {
     $("recordsBody").innerHTML=filtered.length?filtered.map(d=>{
       const status=d.vaccination_status||"Unknown";
       const badge=status==="Vaccinated"?"badge":status==="Unvaccinated"?"badge red":"badge warn";
-      return `<tr><td>${d.photo_display_url ? `<a href="${escapeHtml(d.photo_display_url)}" target="_blank" rel="noopener"><img class="dog-thumb" src="${escapeHtml(d.photo_display_url)}" alt="Larawan ni ${escapeHtml(d.dog_name)}" loading="lazy"></a>` : "—"}</td><td><strong>${escapeHtml(d.registration_no)}</strong></td><td>${escapeHtml(d.dog_name)}<br><span class="muted">${escapeHtml(d.breed||"Breed not specified")} • ${escapeHtml(d.sex||"—")}</span></td><td>${escapeHtml(d.owners?.full_name||"—")}<br><span class="muted">${escapeHtml(d.owners?.purok||"")}</span></td><td><span class="${badge}">${escapeHtml(status)}</span><br><span class="muted">Next: ${fmtDate(d.next_vaccination_date)}</span></td><td>${fmtDate(d.registration_date)}</td><td><button type="button" class="danger small delete-dog-btn" data-dog-id="${escapeHtml(d.id)}" data-dog-name="${escapeHtml(d.dog_name)}">Delete</button> <button type="button" class="small edit-dog-btn" data-dog-id="${escapeHtml(d.id)}">Edit</button></td></tr>`;
-    }).join(""):'<tr><td colspan="7">Walang tugmang record.</td></tr>';
+      return `<tr><td>${d.photo_display_url ? `<a href="${escapeHtml(d.photo_display_url)}" target="_blank" rel="noopener"><img class="dog-thumb" src="${escapeHtml(d.photo_display_url)}" alt="Larawan ni ${escapeHtml(d.dog_name)}" loading="lazy"></a>` : "—"}</td><td><strong>${escapeHtml(d.registration_no)}</strong></td><td>${escapeHtml(d.dog_name)}<br><span class="muted">${escapeHtml(d.breed||"Breed not specified")} • ${escapeHtml(d.sex||"—")}</span></td><td>${escapeHtml(d.owners?.full_name||"—")}<br><span class="muted">${escapeHtml(d.owners?.purok||"")}</span></td><td><span class="${badge}">${escapeHtml(status)}</span><br><span class="muted">Next: ${fmtDate(d.next_vaccination_date)}</span></td><td>${fmtDate(d.registration_date)}</td></tr>`;
+    }).join(""):'<tr><td colspan="6">Walang tugmang record.</td></tr>';
 }
-$("searchInput").addEventListener("input",renderRecords);
+  $("searchInput").addEventListener("input",renderRecords);
 
-  // Delete one dog registration, its vaccination history, and its stored photo (if present).
-  $("recordsBody").addEventListener("click", async event => {
-    const editButton = event.target.closest(".edit-dog-btn");
-    if (editButton) {
-      const dog = dogs.find(item => String(item.id) === editButton.dataset.dogId);
-      if (!dog) return showMessage("Hindi na makita ang record na ito. I-refresh ang listahan.", "err");
-      startEditDog(dog);
-      return;
-    }
-    const button = event.target.closest(".delete-dog-btn");
-    if (!button) return;
-    const dog = dogs.find(item => String(item.id) === button.dataset.dogId);
-    if (!dog) return showMessage("Hindi na makita ang record na ito. I-refresh ang listahan.", "err");
-    const confirmed = window.confirm(`Sigurado ka bang buburahin ang dog record na ito?\n\nRegistration No.: ${dog.registration_no}\nPangalan: ${dog.dog_name}\n\nKasama sa tatanggalin ang vaccination history ng asong ito. Hindi mabubura ang owner record.`);
-    if (!confirmed) return;
-
-    button.disabled = true;
-    button.textContent = "Deleting…";
-    try {
-      // Remove child vaccination records first to avoid foreign-key conflicts.
-      const { error: historyError } = await db.from("vaccination_records").delete().eq("dog_id", dog.id);
-      if (historyError) throw new Error("Hindi natanggal ang vaccination history: " + historyError.message);
-
-      const { error: dogError } = await db.from("dogs").delete().eq("id", dog.id);
-      if (dogError) throw new Error("Hindi natanggal ang dog record: " + dogError.message);
-
-      let photoWarning = "";
-      const photoPath = getPhotoObjectPath(dog.photo_url);
-      if (photoPath) {
-        const { error: photoError } = await db.storage.from(PHOTO_BUCKET).remove([photoPath]);
-        if (photoError) photoWarning = " Naitanggal ang record pero maaaring naiwan ang photo file sa Storage: " + photoError.message;
-      }
-      await loadData();
-      showMessage("Nabura ang dog record at vaccination history." + photoWarning, photoWarning ? "err" : "ok");
-    } catch (error) {
-      button.disabled = false;
-      button.textContent = "Delete";
-      showMessage("Hindi natanggal ang record: " + (error?.message || error), "err");
-      await loadData();
-    }
-  });
-
-  function setFormValue(form, name, value){
-    const field = form.elements.namedItem(name);
-    if(field) field.value = value ?? "";
+  function refreshOwnerOptions(){
+    const select=$("existingOwnerId");
+    if(!select) return;
+    const previous=select.value;
+    select.innerHTML='<option value="">Pumili ng amo...</option>'+owners.slice().sort((a,b)=>(a.full_name||"").localeCompare(b.full_name||"")).map(o=>{
+      const details=[o.purok,o.phone].filter(Boolean).join(" • ");
+      return `<option value="${escapeHtml(o.id)}">${escapeHtml(o.full_name)}${details ? " — "+escapeHtml(details):""}</option>`;
+    }).join("");
+    if(owners.some(o=>String(o.id)===previous)) select.value=previous;
   }
-  function startEditDog(dog){
-    const form = $("registrationForm");
-    editingDogId = dog.id;
-    const owner = owners.find(o => String(o.id) === String(dog.owner_id)) || {};
-    setFormValue(form,"owner_name",owner.full_name);
-    setFormValue(form,"phone",owner.phone);
-    setFormValue(form,"purok",owner.purok);
-    setFormValue(form,"address",owner.address);
-    setFormValue(form,"dog_name",dog.dog_name);
-    setFormValue(form,"breed",dog.breed);
-    setFormValue(form,"sex",dog.sex);
-    setFormValue(form,"color",dog.color);
-    setFormValue(form,"birth_date",dog.birth_date);
-    setFormValue(form,"vaccination_status",dog.vaccination_status || "Unknown");
-    setFormValue(form,"vaccination_date",dog.vaccination_date);
-    setFormValue(form,"next_vaccination_date",dog.next_vaccination_date);
-    setFormValue(form,"notes",dog.notes);
-    $("dogPhoto").value = "";
-    const preview = $("dogPhotoPreview");
-    if(dog.photo_display_url){ preview.src=dog.photo_display_url; preview.classList.remove("hidden"); }
-    else { preview.removeAttribute("src"); preview.classList.add("hidden"); }
-    $("saveRegistrationBtn").textContent="Save changes";
-    $("cancelEditBtn").classList.remove("hidden");
-    document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab==="register"));
-    ["register","records","vaccination"].forEach(t=>$("tab-"+t).classList.toggle("hidden",t!=="register"));
-    $("tab-register").scrollIntoView({behavior:"smooth",block:"start"});
-    showMessage("Edit mode: baguhin ang fields at pindutin ang Save changes.");
+  function updateOwnerMode(){
+    const existing=$("ownerMode").value==="existing";
+    $("existingOwnerField").classList.toggle("hidden",!existing);
+    $("existingOwnerId").required=existing;
+    ["ownerNameField","ownerPhoneField","ownerPurokField","ownerAddressField"].forEach(id=>$(id).classList.toggle("hidden",existing));
+    ["owner_name","phone","purok","address"].forEach(name=>{
+      const input=$("registrationForm").elements.namedItem(name);
+      input.disabled=existing;
+      input.required=!existing && (name==="owner_name"||name==="purok");
+    });
   }
-  function cancelEdit(){
-    editingDogId = null;
-    $("registrationForm").reset();
-    $("dogPhotoPreview").removeAttribute("src");
-    $("dogPhotoPreview").classList.add("hidden");
-    $("saveRegistrationBtn").textContent="Save registration";
-    $("cancelEditBtn").classList.add("hidden");
-  }
-  $("cancelEditBtn").addEventListener("click",cancelEdit);
-  $("registrationForm").addEventListener("reset",()=>{
-    if(editingDogId !== null){ editingDogId = null; }
-    $("saveRegistrationBtn").textContent="Save registration";
-    $("cancelEditBtn").classList.add("hidden");
-    $("dogPhotoPreview").removeAttribute("src");
-    $("dogPhotoPreview").classList.add("hidden");
-  });
+  $("ownerMode").addEventListener("change",updateOwnerMode);
+  $("registrationForm").addEventListener("reset",()=>setTimeout(updateOwnerMode,0));
+  updateOwnerMode();
 
   $("dogPhoto").addEventListener("change",()=>{
     const file=$("dogPhoto").files[0];
@@ -345,30 +267,21 @@ $("searchInput").addEventListener("input",renderRecords);
   $("registrationForm").addEventListener("submit",async e=>{
     const form = e.currentTarget;
     e.preventDefault(); if(!db)return;
-    const v=Object.fromEntries(new FormData(form).entries());
-    const wasEditing = editingDogId !== null;
-    const editingDog = wasEditing ? dogs.find(d=>String(d.id)===String(editingDogId)) : null;
-    if(wasEditing && !editingDog){ cancelEdit(); return showMessage("Hindi na makita ang record. I-refresh ang listahan.","err"); }
-    let uploadedPath = null;
+    const f=new FormData(e.currentTarget), v=Object.fromEntries(f.entries());
     try{
-      let owner;
-      if(wasEditing){
-        owner = owners.find(o=>String(o.id)===String(editingDog.owner_id));
-        if(!owner) throw new Error("Hindi makita ang owner record ng asong ito.");
-        const {data,error}=await db.from("owners").update({
-          full_name:v.owner_name.trim(), phone:v.phone.trim()||null,
-          purok:v.purok.trim(), address:v.address.trim()||null
-        }).eq("id",owner.id).select().single();
-        if(error) throw error;
-        owner=data;
-      } else {
-        owner=owners.find(o=>o.full_name.trim().toLowerCase()===v.owner_name.trim().toLowerCase() && (o.purok||"").trim().toLowerCase()===v.purok.trim().toLowerCase() && (o.phone||"").trim()===v.phone.trim());
+      let owner=null;
+      if(v.owner_mode==="existing"){
+        owner=owners.find(o=>String(o.id)===String(v.existing_owner_id));
+        if(!owner) throw new Error("Pumili ng existing owner mula sa listahan. Kung walang lumalabas, i-refresh ang data o piliin ang bagong amo kung hindi pa talaga registered.");
+      }else{
+        // Reuse a matching owner to reduce duplicates when name, purok, and phone match.
+        owner=owners.find(o=>o.full_name.trim().toLowerCase()===v.owner_name.trim().toLowerCase() && (o.purok||"").trim().toLowerCase()===v.purok.trim().toLowerCase() && (o.phone||"").trim()===(v.phone||"").trim());
         if(!owner){
           const {data,error}=await db.from("owners").insert({full_name:v.owner_name.trim(),phone:v.phone.trim()||null,purok:v.purok.trim(),address:v.address.trim()||null}).select().single();
           if(error) throw error; owner=data;
         }
       }
-      let photoUrl = wasEditing ? editingDog.photo_url : null;
+      let photoUrl=null;
       const photoFile=$("dogPhoto").files[0];
       if(photoFile){
         if(!["image/jpeg","image/png","image/webp"].includes(photoFile.type) || photoFile.size>MAX_PHOTO_BYTES)
@@ -377,31 +290,17 @@ $("searchInput").addEventListener("input",renderRecords);
         const filePath=`${owner.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
         const {error:uploadError}=await db.storage.from(PHOTO_BUCKET).upload(filePath,photoFile,{contentType:photoFile.type,upsert:false});
         if(uploadError) throw new Error("Hindi na-upload ang larawan. Tiyaking may dog-photos bucket at tamang Storage policies. "+uploadError.message);
-        uploadedPath=filePath;
         photoUrl=filePath;
       }
-      const dogValues={
+      const {error}=await db.from("dogs").insert({
         owner_id:owner.id,dog_name:v.dog_name.trim(),breed:v.breed.trim()||null,sex:v.sex||null,color:v.color.trim()||null,
         birth_date:v.birth_date||null,vaccination_status:v.vaccination_status,
         vaccination_date:v.vaccination_date||null,next_vaccination_date:v.next_vaccination_date||null,
         notes:v.notes.trim()||null,photo_url:photoUrl
-      };
-      let result;
-      if(wasEditing) result=await db.from("dogs").update(dogValues).eq("id",editingDog.id);
-      else result=await db.from("dogs").insert(dogValues);
-      if(result.error) throw result.error;
-      if(wasEditing && photoFile && editingDog.photo_url){
-        const oldPath=getPhotoObjectPath(editingDog.photo_url);
-        if(oldPath && oldPath!==uploadedPath) await db.storage.from(PHOTO_BUCKET).remove([oldPath]);
-      }
-      editingDogId=null;
-      form.reset();
-      await loadData();
-      showMessage(wasEditing ? "Na-update ang dog registration." : "Na-save ang registration.");
-    }catch(err){
-      if(uploadedPath) await db.storage.from(PHOTO_BUCKET).remove([uploadedPath]);
-      showMessage((wasEditing ? "Hindi na-update: " : "Hindi na-save: ")+err.message,"err");
-    }
+      });
+      if(error) throw error;
+form.reset(); updateOwnerMode(); await loadData(); showMessage("Na-save ang aso sa owner record: "+owner.full_name+".");
+    }catch(err){showMessage("Hindi na-save: "+err.message,"err");}
   });
   $("vaccinationForm").addEventListener("submit",async e=>{
     e.preventDefault(); if(!db)return;
