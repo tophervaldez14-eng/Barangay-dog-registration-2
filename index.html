@@ -103,7 +103,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
       <div class="grid" style="margin-bottom:12px">
         <div class="field full"><label>Search by dog, owner, registration no. or purok</label><input id="searchInput" placeholder="Mag-type para maghanap..."></div>
       </div>
-      <div class="tablewrap"><table><thead><tr><th>Litrato</th><th>Dog Reg. No.</th><th>Aso</th><th>Amo / Purok</th><th>Vaccination</th><th>Registered</th></tr></thead><tbody id="recordsBody"><tr><td colspan="6">Mag-login para makita ang records.</td></tr></tbody></table></div>
+      <div class="tablewrap"><table><thead><tr><th>Litrato</th><th>Dog Reg. No.</th><th>Aso</th><th>Amo / Purok</th><th>Vaccination</th><th>Registered</th><th>Actions</th></tr></thead><tbody id="recordsBody"><tr><td colspan="6">Mag-login para makita ang records.</td></tr></tbody></table></div>
     </section>
     <section id="tab-vaccination" class="card hidden">
       <h2>Update vaccination status</h2>
@@ -220,10 +220,64 @@ for (const dog of dogs) {
     $("recordsBody").innerHTML=filtered.length?filtered.map(d=>{
       const status=d.vaccination_status||"Unknown";
       const badge=status==="Vaccinated"?"badge":status==="Unvaccinated"?"badge red":"badge warn";
-      return `<tr><td>${d.photo_display_url ? `<a href="${escapeHtml(d.photo_display_url)}" target="_blank" rel="noopener"><img class="dog-thumb" src="${escapeHtml(d.photo_display_url)}" alt="Larawan ni ${escapeHtml(d.dog_name)}" loading="lazy"></a>` : "—"}</td><td><strong>${escapeHtml(d.registration_no)}</strong></td><td>${escapeHtml(d.dog_name)}<br><span class="muted">${escapeHtml(d.breed||"Breed not specified")} • ${escapeHtml(d.sex||"—")}</span></td><td>${escapeHtml(d.owners?.full_name||"—")}<br><span class="muted">${escapeHtml(d.owners?.purok||"")}</span></td><td><span class="${badge}">${escapeHtml(status)}</span><br><span class="muted">Next: ${fmtDate(d.next_vaccination_date)}</span></td><td>${fmtDate(d.registration_date)}</td></tr>`;
-    }).join(""):'<tr><td colspan="6">Walang tugmang record.</td></tr>';
+      return `<tr><td>${d.photo_display_url ? `<a href="${escapeHtml(d.photo_display_url)}" target="_blank" rel="noopener"><img class="dog-thumb" src="${escapeHtml(d.photo_display_url)}" alt="Larawan ni ${escapeHtml(d.dog_name)}" loading="lazy"></a>` : "—"}</td><td><strong>${escapeHtml(d.registration_no)}</strong></td><td>${escapeHtml(d.dog_name)}<br><span class="muted">${escapeHtml(d.breed||"Breed not specified")} • ${escapeHtml(d.sex||"—")}</span></td><td>${escapeHtml(d.owners?.full_name||"—")}<br><span class="muted">${escapeHtml(d.owners?.purok||"")}</span></td><td><span class="${badge}">${escapeHtml(status)}</span><br><span class="muted">Next: ${fmtDate(d.next_vaccination_date)}</span></td><td>${fmtDate(d.registration_date)}</td><td><div class="actions" style="margin-top:0"><button type="button" class="secondary" data-action="edit" data-id="${escapeHtml(d.id)}">Edit</button><button type="button" class="danger" data-action="delete" data-id="${escapeHtml(d.id)}">Delete</button></div></td></tr>`;
+    }).join(""):'<tr><td colspan="7">Walang tugmang record.</td></tr>';
 }
   $("searchInput").addEventListener("input",renderRecords);
+
+  // Edit and delete actions for each registered dog record.
+  $("recordsBody").addEventListener("click", async e => {
+    const button=e.target.closest("button[data-action][data-id]");
+    if(!button || !db) return;
+    const dog=dogs.find(item=>String(item.id)===String(button.dataset.id));
+    if(!dog) return showMessage("Hindi na makita ang record. I-refresh ang data.","err");
+
+    if(button.dataset.action==="edit"){
+      const dogName=window.prompt("Pangalan ng aso:",dog.dog_name||"");
+      if(dogName===null) return;
+      if(!dogName.trim()) return showMessage("Hindi puwedeng walang pangalan ang aso.","err");
+      const breed=window.prompt("Breed / lahi:",dog.breed||""); if(breed===null) return;
+      const sex=window.prompt("Kasarian (Male, Female, Unknown o blank):",dog.sex||""); if(sex===null) return;
+      const color=window.prompt("Kulay / marka:",dog.color||""); if(color===null) return;
+      const birthDate=window.prompt("Petsa ng kapanganakan (YYYY-MM-DD o blank):",dog.birth_date||""); if(birthDate===null) return;
+      const vaccinationStatus=window.prompt("Vaccination status (Vaccinated, Unvaccinated, Unknown):",dog.vaccination_status||"Unknown"); if(vaccinationStatus===null) return;
+      if(!["Vaccinated","Unvaccinated","Unknown"].includes(vaccinationStatus.trim())) return showMessage("Gamitin ang Vaccinated, Unvaccinated, o Unknown para sa vaccination status.","err");
+      const vaccinationDate=window.prompt("Petsa ng bakuna (YYYY-MM-DD o blank):",dog.vaccination_date||""); if(vaccinationDate===null) return;
+      const nextVaccinationDate=window.prompt("Susunod na bakuna (YYYY-MM-DD o blank):",dog.next_vaccination_date||""); if(nextVaccinationDate===null) return;
+      const notes=window.prompt("Notes:",dog.notes||""); if(notes===null) return;
+      const isDate=v=>!v || /^\d{4}-\d{2}-\d{2}$/.test(v);
+      if(!isDate(birthDate.trim())||!isDate(vaccinationDate.trim())||!isDate(nextVaccinationDate.trim())) return showMessage("Gamitin ang date format na YYYY-MM-DD o iwanang blanko.","err");
+      button.disabled=true;
+      const {error}=await db.from("dogs").update({
+        dog_name:dogName.trim(),breed:breed.trim()||null,sex:sex.trim()||null,color:color.trim()||null,
+        birth_date:birthDate.trim()||null,vaccination_status:vaccinationStatus.trim(),
+        vaccination_date:vaccinationDate.trim()||null,next_vaccination_date:nextVaccinationDate.trim()||null,notes:notes.trim()||null
+      }).eq("id",dog.id);
+      button.disabled=false;
+      if(error) return showMessage("Hindi na-update ang record: "+error.message,"err");
+      await loadData();
+      showMessage("Na-update ang registration ni "+dogName.trim()+".");
+      return;
+    }
+
+    if(button.dataset.action==="delete"){
+      if(!window.confirm(`Sigurado ka bang ide-delete ang registration ni ${dog.dog_name} (${dog.registration_no})? Hindi ito mare-recover mula sa website.`)) return;
+      button.disabled=true;
+      // Remove associated vaccination history first so the dog row can be deleted cleanly.
+      const {error:historyError}=await db.from("vaccination_records").delete().eq("dog_id",dog.id);
+      if(historyError){button.disabled=false;return showMessage("Hindi na-delete ang vaccination history: "+historyError.message,"err");}
+      const {error}=await db.from("dogs").delete().eq("id",dog.id);
+      button.disabled=false;
+      if(error) return showMessage("Hindi na-delete ang registration: "+error.message,"err");
+      const objectPath=getPhotoObjectPath(dog.photo_url);
+      if(objectPath){
+        const {error:photoError}=await db.storage.from(PHOTO_BUCKET).remove([objectPath]);
+        if(photoError) console.warn("Deleted dog record but photo cleanup failed:",photoError.message);
+      }
+      await loadData();
+      showMessage("Na-delete ang dog registration. Na-update na rin ang totals at owner choices.");
+    }
+  });
 
   function refreshOwnerOptions(){
     const select=$("existingOwnerId");
