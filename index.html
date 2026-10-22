@@ -85,7 +85,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
         <h3>Impormasyon ng aso</h3>
         <div class="grid">
           <div class="field"><label>Pangalan ng aso *</label><input name="dog_name" required maxlength="100"></div>
-          <div class="field full"><label>Larawan ng aso (optional)</label><input id="dogPhoto" name="dog_photo" type="file" accept="image/jpeg,image/png,image/webp"><p class="muted">JPG, PNG, o WebP; hanggang 5 MB. Puwede ring pumili ng larawan mula sa cellphone.</p><img id="dogPhotoPreview" class="photo-preview hidden" alt="Preview ng larawan ng aso"></div>
+          <div class="field full"><label>Kunan ng larawan ang aso (optional)</label><input id="dogPhoto" name="dog_photo" type="file" accept="image/*" capture="environment"><p class="muted">Sa cellphone, direktang bubuksan nito ang camera para kunan ang aso. Hanggang 5 MB; JPG, PNG, o WebP.</p><img id="dogPhotoPreview" class="photo-preview hidden" alt="Preview ng larawan ng aso"></div>
           <div class="field"><label>Breed / Lahi</label><input name="breed" placeholder="Hal. Aspin" maxlength="100"></div>
           <div class="field"><label>Kasarian</label><select name="sex"><option value="">Pumili</option><option>Male</option><option>Female</option><option>Unknown</option></select></div>
           <div class="field"><label>Kulay / Marka</label><input name="color" maxlength="100"></div>
