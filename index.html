@@ -206,7 +206,10 @@ for (const dog of dogs) {
       if (!error && data?.signedUrl) dog.photo_display_url = data.signedUrl;
       else console.warn("Hindi ma-load ang dog photo:", dog.registration_no, error?.message || "No signed URL returned");
     }
-    $("ownerCount").textContent=owners.length;
+    // Dashboard totals are based only on currently registered dog records.
+    // Count each owner once, even if they have multiple registered dogs.
+    const registeredOwnerIds = new Set(dogs.map(d => d.owner_id).filter(id => id !== null && id !== undefined && id !== "").map(String));
+    $("ownerCount").textContent=registeredOwnerIds.size;
     $("dogCount").textContent=dogs.length;
     $("vaccinatedCount").textContent=dogs.filter(x=>x.vaccination_status==="Vaccinated").length;
     renderRecords();
