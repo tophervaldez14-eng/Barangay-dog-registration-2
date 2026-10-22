@@ -85,7 +85,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
         <h3>Impormasyon ng aso</h3>
         <div class="grid">
           <div class="field"><label>Pangalan ng aso *</label><input name="dog_name" required maxlength="100"></div>
-          <div class="field full"><label>Kunan ng larawan ang aso (optional)</label><input id="dogPhoto" name="dog_photo" type="file" accept="image/*" capture="environment"><p class="muted">Sa cellphone, direktang bubuksan nito ang camera para kunan ang aso. Hanggang 5 MB; JPG, PNG, o WebP.</p><img id="dogPhotoPreview" class="photo-preview hidden" alt="Preview ng larawan ng aso"></div>
+          <div class="field full"><label>Kunan ng larawan ang aso (optional)</label><input id="dogPhoto" name="dog_photo" type="file" accept="image/*" capture="environment"><p class="muted">Sa cellphone, direktang bubuksan nito ang camera para kunan ang aso. Hanggang 15 MB; JPG, PNG, o WebP.</p><img id="dogPhotoPreview" class="photo-preview hidden" alt="Preview ng larawan ng aso"></div>
           <div class="field"><label>Breed / Lahi</label><input name="breed" placeholder="Hal. Aspin" maxlength="100"></div>
           <div class="field"><label>Kasarian</label><select name="sex"><option value="">Pumili</option><option>Male</option><option>Female</option><option>Unknown</option></select></div>
           <div class="field"><label>Kulay / Marka</label><input name="color" maxlength="100"></div>
@@ -157,7 +157,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
   const $ = id => document.getElementById(id);
   let db = null, dogs = [], owners = [];
   const PHOTO_BUCKET = "dog-photos";
-  const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+  const MAX_PHOTO_BYTES = 15 * 1024 * 1024;
   const showMessage = (text, type="ok") => {
     const el=$("message"); el.textContent=text; el.className=type; el.style.display="block";
     window.scrollTo({top:0,behavior:"smooth"}); setTimeout(()=>{el.style.display="none";},6500);
@@ -258,7 +258,7 @@ for (const dog of dogs) {
     if(!file)return;
     if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>MAX_PHOTO_BYTES){
       $("editPhoto").value="";
-      return showMessage("Pumili ng JPG, PNG, o WebP na larawan na hanggang 5 MB.","err");
+      return showMessage("Pumili ng JPG, PNG, o WebP na larawan na hanggang 15 MB.","err");
     }
     preview.src=URL.createObjectURL(file);preview.classList.remove("hidden");
   });
@@ -271,7 +271,7 @@ for (const dog of dogs) {
     const isDate=x=>!x||/^\d{4}-\d{2}-\d{2}$/.test(x);
     if(![v.birth_date,v.vaccination_date,v.next_vaccination_date].every(isDate))return showMessage("Suriin ang mga petsa.","err");
     const photoFile=$("editPhoto").files[0];
-    if(photoFile&&(!["image/jpeg","image/png","image/webp"].includes(photoFile.type)||photoFile.size>MAX_PHOTO_BYTES))return showMessage("Pumili ng JPG, PNG, o WebP na larawan na hanggang 5 MB.","err");
+    if(photoFile&&(!["image/jpeg","image/png","image/webp"].includes(photoFile.type)||photoFile.size>MAX_PHOTO_BYTES))return showMessage("Pumili ng JPG, PNG, o WebP na larawan na hanggang 15 MB.","err");
     const saveButton=$("saveEditBtn"); saveButton.disabled=true;
     try{
       // Update owner details shared by all dogs registered under this owner.
@@ -381,7 +381,7 @@ for (const dog of dogs) {
       $("dogPhoto").value="";
       preview.removeAttribute("src");
       preview.classList.add("hidden");
-      return showMessage("Pumili ng JPG, PNG, o WebP na larawan na hanggang 5 MB.","err");
+      return showMessage("Pumili ng JPG, PNG, o WebP na larawan na hanggang 15 MB.","err");
     }
     preview.src=URL.createObjectURL(file);
     preview.classList.remove("hidden");
@@ -407,7 +407,7 @@ for (const dog of dogs) {
       const photoFile=$("dogPhoto").files[0];
       if(photoFile){
         if(!["image/jpeg","image/png","image/webp"].includes(photoFile.type) || photoFile.size>MAX_PHOTO_BYTES)
-          throw new Error("Pumili ng JPG, PNG, o WebP na larawan na hanggang 5 MB.");
+          throw new Error("Pumili ng JPG, PNG, o WebP na larawan na hanggang 15 MB.");
         const ext=photoFile.type==="image/png"?"png":photoFile.type==="image/webp"?"webp":"jpg";
         const filePath=`${owner.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
         const {error:uploadError}=await db.storage.from(PHOTO_BUCKET).upload(filePath,photoFile,{contentType:photoFile.type,upsert:false});
