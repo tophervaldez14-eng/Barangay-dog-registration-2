@@ -226,11 +226,16 @@ for (const dog of dogs) {
     const select=$("existingOwnerId");
     if(!select) return;
     const previous=select.value;
-    select.innerHTML='<option value="">Pumili ng amo...</option>'+owners.slice().sort((a,b)=>(a.full_name||"").localeCompare(b.full_name||"")).map(o=>{
+    // Only show owners who still have at least one dog in the current dogs table.
+    // If the owner's last dog registration is deleted, they disappear from this list after loadData().
+    const activeOwnerIds=new Set(dogs.map(d=>String(d.owner_id)).filter(Boolean));
+    const activeOwners=owners.filter(o=>activeOwnerIds.has(String(o.id)));
+    select.innerHTML='<option value="">Pumili ng amo...</option>'+activeOwners.slice().sort((a,b)=>(a.full_name||"").localeCompare(b.full_name||"")).map(o=>{
       const details=[o.purok,o.phone].filter(Boolean).join(" • ");
       return `<option value="${escapeHtml(o.id)}">${escapeHtml(o.full_name)}${details ? " — "+escapeHtml(details):""}</option>`;
     }).join("");
-    if(owners.some(o=>String(o.id)===previous)) select.value=previous;
+    if(activeOwners.some(o=>String(o.id)===previous)) select.value=previous;
+    else select.value="";
   }
   function updateOwnerMode(){
     const existing=$("ownerMode").value==="existing";
